@@ -1,44 +1,71 @@
+/*** includes ***/
 #include <stdio.h>
 #include <unistd.h>
 #include <termios.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <errno.h>
 
+/*** data ***/
 struct termios orig_termios; // a struct that stores the original terminal attributes
+
+/*** terminal ***/
+void die(const char *s)
+{
+    perror(s); // print the error message
+    exit(1);   // exit the program
+}
 
 void disableRawMode()
 {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios); // set the terminal attributes to the original terminal attributes
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+        die("tcsetattr"); // set the terminal attributes to the original terminal attributes
 }
 
 void enableRawMode()
 {
-    struct termios raw;     // a struct that stores the terminal attributes
+    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
+        die("tcgetattr");
     atexit(disableRawMode); // at exit, disable the raw mode
+    // a struct that stores the terminal attributes
 
-    raw = orig_termios; // copy the original terminal attributes to raw
+    struct termios raw = orig_termios; // copy the original terminal attributes to raw
 
-    tcgetattr(STDIN_FILENO, &raw); // get the terminal attributes
-    raw.c_iflag &= ~(IXON | ICRNL);
-    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG); // turn off the echo and canonical mode
+    tcgetattr(STDIN_FILENO, &raw);                            // get the terminal attributes
+    raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON); // turn off the input flags
+    raw.c_iflag &= ~(IXON | ICRNL);                           // turn off the input flags
+    raw.c_oflag &= ~(OPOST);                                  // turn off the output flags
+    raw.c_cflag |= (CS8);                                     // set the character size to 8 bits
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);          // turn off the echo and canonical mode
 
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); // set the terminal attributes in the terminal
+    raw.c_cc[VMIN] = 0;  // set the minimum number of bytes of input needed before read() can return
+    raw.c_cc[VTIME] = 1; // set the maximum amount of time to wait before read() returns
+
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
+        die("tcsetattr"); // set the terminal attributes in the terminal
 }
 
+/*** init ***/
 int main()
 {
     enableRawMode(); // enable the raw mode
     char c;
-    while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q')
+    while (1)
     {
+        char c = '\0';
+        if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)
+            die("read"); // read the input from the terminal
+
         if (iscntrl(c))
         {
             printf("%d\n", c);
         }
         else
         {
-            printf("%d ('%c')\n", c, c);
+            printf("%d ('%c')\r\n", c, c);
         }
+        if (c == 'q')
+            break;
     }; // read the input from the terminal and print it until the input is 'q'
     return 0;
 }
