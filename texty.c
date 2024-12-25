@@ -6,6 +6,9 @@
 #include <ctype.h>
 #include <errno.h>
 
+/*** defines ***/
+#define CTRL_KEY(k) ((k) & 0x1f) // a macro that sets the control key
+
 /*** data ***/
 struct termios orig_termios; // a struct that stores the original terminal attributes
 
@@ -45,6 +48,29 @@ void enableRawMode()
         die("tcsetattr"); // set the terminal attributes in the terminal
 }
 
+char editorReadKey()
+{
+    int nread;
+    char c;
+    while ((nread = read(STDIN_FILENO, &c, 1)) != 1)
+    {
+        if (nread == -1 && errno != EAGAIN)
+            die("read");
+    }
+    return c;
+}
+/*** input ***/
+void editorProcessKeypress()
+{
+    char c = editorReadKey();
+    switch (c)
+    {
+    case CTRL_KEY('q'):
+        exit(0);
+        break;
+    }
+}
+
 /*** init ***/
 int main()
 {
@@ -52,20 +78,7 @@ int main()
     char c;
     while (1)
     {
-        char c = '\0';
-        if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)
-            die("read"); // read the input from the terminal
-
-        if (iscntrl(c))
-        {
-            printf("%d\n", c);
-        }
-        else
-        {
-            printf("%d ('%c')\r\n", c, c);
-        }
-        if (c == 'q')
-            break;
+        editorProcessKeypress();
     }; // read the input from the terminal and print it until the input is 'q'
     return 0;
 }
