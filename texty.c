@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 
 struct termios orig_termios; // a struct that stores the original terminal attributes
@@ -14,7 +15,7 @@ void enableRawMode(){
     struct termios raw; // a struct that stores the terminal attributes
     atexit(disableRawMode); // at exit, disable the raw mode
 
-    struct termios raw = orig_termios; // copy the original terminal attributes to raw
+    raw = orig_termios; // copy the original terminal attributes to raw
 
     tcgetattr(STDIN_FILENO, &raw);  // get the terminal attributes
     raw.c_lflag &= ~(ECHO | ICANON);   // turn off the echo and canonical mode
@@ -26,6 +27,12 @@ int main()
 {  
     enableRawMode(); // enable the raw mode
     char c; 
-    while (read(STDIN_FILENO, &c, 1) == 1 && c!='q'); // read the input from the terminal and print it until the input is 'q'
+    while (read(STDIN_FILENO, &c, 1) == 1 && c!='q'){
+        if (iscntrl(c)){
+            printf("%d\n",c);
+        }else{
+            printf("%d ('%c')\n",c,c);
+        }
+    }; // read the input from the terminal and print it until the input is 'q'
     return 0;
 }
