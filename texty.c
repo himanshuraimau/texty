@@ -15,6 +15,8 @@ struct termios orig_termios; // a struct that stores the original terminal attri
 /*** terminal ***/
 void die(const char *s)
 {
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
     perror(s); // print the error message
     exit(1);   // exit the program
 }
@@ -61,8 +63,10 @@ char editorReadKey()
 }
 
 /*** output ***/
-void editorRefreshScreen() {
-  write(STDOUT_FILENO, "\x1b[2J", 4);
+void editorRefreshScreen()
+{
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
 /*** input ***/
@@ -72,6 +76,8 @@ void editorProcessKeypress()
     switch (c)
     {
     case CTRL_KEY('q'):
+        write(STDOUT_FILENO, "\x1b[2J", 4);
+        write(STDOUT_FILENO, "\x1b[H", 3);
         exit(0);
         break;
     }
@@ -83,7 +89,8 @@ int main()
     enableRawMode(); // enable the raw mode
     char c;
     while (1)
-    {   editorRefreshScreen();
+    {
+        editorRefreshScreen();
         editorProcessKeypress();
     }; // read the input from the terminal and print it until the input is 'q'
     return 0;
