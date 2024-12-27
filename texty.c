@@ -59,6 +59,12 @@ char editorReadKey()
     }
     return c;
 }
+
+/*** output ***/
+void editorRefreshScreen() {
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+}
+
 /*** input ***/
 void editorProcessKeypress()
 {
@@ -77,7 +83,7 @@ int main()
     enableRawMode(); // enable the raw mode
     char c;
     while (1)
-    {
+    {   editorRefreshScreen();
         editorProcessKeypress();
     }; // read the input from the terminal and print it until the input is 'q'
     return 0;
