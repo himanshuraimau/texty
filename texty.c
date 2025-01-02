@@ -11,8 +11,11 @@
 #define CTRL_KEY(k) ((k) & 0x1f) // a macro that sets the control key
 
 /*** data ***/
-struct editorConfig {
-  struct termios orig_termios;
+struct editorConfig
+{
+    int screenrows;
+    int screencols;
+    struct termios orig_termios;
 };
 struct editorConfig E; // a global struct that stores the terminal attributes
 
@@ -33,12 +36,13 @@ void disableRawMode()
 
 void enableRawMode()
 {
-     if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
+    if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1)
         die("tcgetattr");
+    die("tcgetattr");
     atexit(disableRawMode); // at exit, disable the raw mode
-    // a struct that stores the terminal attributes
+                            // a struct that stores the terminal attributes
 
-   struct termios raw = E.orig_termios;// copy the original terminal attributes to raw
+    struct termios raw = E.orig_termios; // copy the original terminal attributes to raw
 
     tcgetattr(STDIN_FILENO, &raw);                            // get the terminal attributes
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON); // turn off the input flags
@@ -66,15 +70,19 @@ char editorReadKey()
     return c;
 }
 
-int getWindowSize(int *rows, int *cols) {
-  struct winsize ws;
-  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-    return -1;
-  } else {
-    *cols = ws.ws_col;
-    *rows = ws.ws_row;
-    return 0;
-  }
+int getWindowSize(int *rows, int *cols)
+{
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+    {
+        return -1;
+    }
+    else
+    {
+        *cols = ws.ws_col;
+        *rows = ws.ws_row;
+        return 0;
+    }
 }
 
 /*** output ***/
@@ -82,7 +90,7 @@ int getWindowSize(int *rows, int *cols) {
 void editorDrawRows()
 {
     int y;
-    for (y = 0; y < 24; y++)
+    for (y = 0; y < E.screenrows; y++) {
     {
         write(STDOUT_FILENO, "~\r\n", 3);
     }
@@ -112,10 +120,17 @@ void editorProcessKeypress()
 }
 
 /*** init ***/
+
+void initEditor()
+{
+    if (getWindowSize(&E.screenrows, &E.screencols) == -1)
+        die("getWindowSize");
+}
+
 int main()
 {
     enableRawMode(); // enable the raw mode
-    char c;
+    initEditor();    // initialize the editor
     while (1)
     {
         editorRefreshScreen();
