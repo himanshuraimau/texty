@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <ctype.h>
 #include <errno.h>
 
@@ -10,7 +11,10 @@
 #define CTRL_KEY(k) ((k) & 0x1f) // a macro that sets the control key
 
 /*** data ***/
-struct termios orig_termios; // a struct that stores the original terminal attributes
+struct editorConfig {
+  struct termios orig_termios;
+};
+struct editorConfig E; // a global struct that stores the terminal attributes
 
 /*** terminal ***/
 void die(const char *s)
@@ -23,18 +27,18 @@ void die(const char *s)
 
 void disableRawMode()
 {
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
         die("tcsetattr"); // set the terminal attributes to the original terminal attributes
 }
 
 void enableRawMode()
 {
-    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
+     if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
         die("tcgetattr");
     atexit(disableRawMode); // at exit, disable the raw mode
     // a struct that stores the terminal attributes
 
-    struct termios raw = orig_termios; // copy the original terminal attributes to raw
+   struct termios raw = E.orig_termios;// copy the original terminal attributes to raw
 
     tcgetattr(STDIN_FILENO, &raw);                            // get the terminal attributes
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON); // turn off the input flags
@@ -60,6 +64,17 @@ char editorReadKey()
             die("read");
     }
     return c;
+}
+
+int getWindowSize(int *rows, int *cols) {
+  struct winsize ws;
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+    return -1;
+  } else {
+    *cols = ws.ws_col;
+    *rows = ws.ws_row;
+    return 0;
+  }
 }
 
 /*** output ***/
